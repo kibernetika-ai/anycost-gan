@@ -4,12 +4,13 @@ import torch.nn.functional as F
 import os
 import math
 
-try:  # CUDA kernel
-    assert not ('FORCE_NATIVE' in os.environ and os.environ['FORCE_NATIVE'])  # add FORCE_NATIVE in env to force native
+use_cuda = torch.cuda.is_available()
+if not use_cuda:  # CUDA kernel
+    # assert not ('FORCE_NATIVE' in os.environ and os.environ['FORCE_NATIVE'])  # add FORCE_NATIVE in env to force native
     from cuda_op.fused_act import FusedLeakyReLU, fused_leaky_relu
     from cuda_op.upfirdn2d import upfirdn2d
-except Exception as e:
-    print(e)
+else:
+    # print(e)
     print(' # Using native op...')
     from cuda_op.op_native import FusedLeakyReLU, fused_leaky_relu, upfirdn2d
 
