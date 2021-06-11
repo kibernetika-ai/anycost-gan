@@ -116,7 +116,6 @@ def main():
         'big nose': '07_Big_Nose',
         'big lips': '06_Big_Lips',
         'male': '20_Male',
-        'hat': '35_Wearing_Hat'
     }
     direction_idx = {k: v for k, v in zip(range(len(direction_map)), direction_map)}
 

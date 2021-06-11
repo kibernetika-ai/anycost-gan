@@ -16,7 +16,7 @@ from PyQt5.QtCore import *
 config = 'anycost-ffhq-config-f'
 assets_dir = 'assets/demo'
 n_style_to_change = 12
-device = 'cpu'
+device = 'cpu' if not torch.cuda.is_available() else 'cuda'
 
 
 class WorkerSignals(QObject):
@@ -216,7 +216,7 @@ class FaceEditor(QMainWindow):
         boundaries = models.get_pretrained('boundary', config)
         self.direction_dict = dict()
         for k, v in direction_map.items():
-            self.direction_dict[k] = boundaries[v].view(1, 1, -1)
+            self.direction_dict[k] = boundaries[v].view(1, 1, -1).to(device)
 
         # 3. prepare the latent code and original images
         file_names = sorted(os.listdir(os.path.join(assets_dir, 'input_images')))
@@ -228,9 +228,9 @@ class FaceEditor(QMainWindow):
             org_image = np.asarray(Image.open(os.path.join(assets_dir, 'input_images', fname)).convert('RGB'))
             latent_code = torch.from_numpy(
                 np.load(os.path.join(assets_dir, 'projected_latents',
-                                     fname.replace('.jpg', '.npy').replace('.png', '.npy'))))
+                                     fname.replace('.jpg', '.npy').replace('.png', '.npy')))).to(device)
             self.org_image_list.append(org_image)
-            self.latent_code_list.append(latent_code.view(1, -1, 512))
+            self.latent_code_list.append(latent_code.view(1, -1, 512).to(device))
 
         # set up the initial display
         self.sample_idx = 0
