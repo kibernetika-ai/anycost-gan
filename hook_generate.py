@@ -75,6 +75,7 @@ def process(inputs, ctx, **kwargs):
         styles = face_gen.deform_vector(styles, direction_values)
         img = face_gen.get_new_face(vector=styles)
         cache_vector_id = face_gen.cache_vector(styles)
+        LOG.info(f'New cached vector ID={cache_vector_id}')
         result['vector_id'] = cache_vector_id
 
     if not is_video:
