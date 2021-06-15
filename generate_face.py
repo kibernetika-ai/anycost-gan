@@ -73,18 +73,20 @@ class FaceGen:
         direction_map = {
             'smiling': '31_Smiling',
             'young': '39_Young',
-            'wavy hair': '33_Wavy_Hair',
-            'gray hair': '17_Gray_Hair',
-            'blonde hair': '09_Blond_Hair',
-            'black hair': '08_Black_Hair',
+            'wavy_hair': '33_Wavy_Hair',
+            'straight_hair': '32_Straight_Hair',
+            'gray_hair': '17_Gray_Hair',
+            'blonde_hair': '09_Blond_Hair',
+            'black_hair': '08_Black_Hair',
             'eyeglass': '15_Eyeglasses',
             'mustache': '22_Mustache',
             'bald': '04_Bald',
             'attractive': '02_Attractive',
-            'big nose': '07_Big_Nose',
-            'big lips': '06_Big_Lips',
+            'big_nose': '07_Big_Nose',
+            'pointy_nose': '27_Pointy_Nose',
+            'big_lips': '06_Big_Lips',
             'male': '20_Male',
-            'mouth open': '21_Mouth_Slightly_Open',
+            'mouth_open': '21_Mouth_Slightly_Open',
         }
         self.direction_idx = {k: v for k, v in zip(range(len(direction_map)), direction_map)}
 
@@ -126,8 +128,9 @@ class FaceGen:
     def encode_image_get_vector(self, img):
         for_encoder = cv2.resize(img, (256, 256), interpolation=cv2.INTER_AREA)
         for_encoder = ((for_encoder.astype(np.float32) - 127.5) / 127.5).transpose([2, 0, 1])
-        vector = self.encoder(torch.tensor(for_encoder).unsqueeze(0).to(self.device))
-        img = self.get_new_face(self.input_kwargs, vector=vector)
+        with torch.no_grad():
+            vector = self.encoder(torch.tensor(for_encoder).unsqueeze(0).to(self.device))
+            img = self.get_new_face(self.input_kwargs, vector=vector)
         return img, vector
 
     def deform_vector(self, old_vector, direction_values, max_value=0.6):
