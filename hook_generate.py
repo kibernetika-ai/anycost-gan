@@ -38,6 +38,7 @@ def process(inputs, ctx, **kwargs):
     direction_values = face_gen.get_direction_values()
 
     if 'image' in inputs:
+        print(inputs['image'])
         image, is_video = helpers.load_image(inputs, 'image', rgb=True)
     if 'vector' in inputs:
         vector = inputs['vector']
