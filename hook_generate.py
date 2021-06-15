@@ -44,6 +44,11 @@ def process(inputs, ctx, **kwargs):
         image, is_video = helpers.load_image(inputs, 'image', rgb=True)
     if 'vector' in inputs and inputs['vector']:
         vector = inputs['vector']
+    if 'vector_id' in inputs and inputs['vector_id']:
+        # Try to load vector
+        vector_id = helpers.get_param(inputs, 'vector_id')
+        vector = face_gen.get_cached_vector(vector_id)
+        LOG.info(f'Using cached vector ID={vector_id}')
 
     # if image supplied, then generate a vector from it and re-generate image
     if image is not None:
@@ -65,14 +70,16 @@ def process(inputs, ctx, **kwargs):
         get_styles=True,
         new_face=new_face
     )
+    result = {}
     if new_face:
-        new_styles = face_gen.deform_vector(styles, direction_values)
-        img = face_gen.get_new_face(vector=new_styles)
+        styles = face_gen.deform_vector(styles, direction_values)
+        img = face_gen.get_new_face(vector=styles)
+        cache_vector_id = face_gen.cache_vector(styles)
+        result['vector_id'] = cache_vector_id
 
     if not is_video:
         img = cv2.imencode('.jpg', img[:, :, ::-1])[1].tobytes()
 
-    return {
-        'image': img,
-        'vector': styles.cpu().numpy().tolist(),
-    }
+    result['image'] = img
+    result['vector'] = styles.cpu().numpy().tolist()
+    return result

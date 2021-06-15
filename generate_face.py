@@ -1,4 +1,7 @@
 import argparse
+import logging
+import time
+import uuid
 
 import cv2
 import numpy as np
@@ -7,6 +10,7 @@ import torch
 import models
 
 n_style_to_change = 12
+LOG = logging.getLogger(__name__)
 
 
 def parse_args():
@@ -48,6 +52,12 @@ def show(img, direction_idx, direction_i):
     cv2.imshow('Face', pic[:, :, ::-1])
 
 
+class CachedVector:
+    def __init__(self, vector, time):
+        self.vector = vector
+        self.time = time
+
+
 class FaceGen:
     def __init__(self, config_name='anycost-ffhq-config-f', gen_path=None, enc_path=None,
                  bound_path=None):
@@ -58,6 +68,8 @@ class FaceGen:
         self.encoder = models.get_pretrained('encoder', config=config_name, path=enc_path).to(device)
         # mean_latent = gen.mean_style(10000)
         self.boundaries = models.get_pretrained('boundary', config_name, path=bound_path)
+        self.keep_cache_sec = 3600
+        self.cache = {}
 
         '''
         possible keys:
@@ -118,6 +130,25 @@ class FaceGen:
             if get_styles:
                 return to_img(img), styles
             return to_img(img)
+
+    def cache_vector(self, vector):
+        vector_id = str(uuid.uuid4())
+        self.cache[vector_id] = CachedVector(vector, time.time())
+        self._invalidate_cache()
+        return vector_id
+
+    def get_cached_vector(self, key):
+        result = self.cache[key]
+        self._invalidate_cache()
+        return result.vector
+
+    def _invalidate_cache(self):
+        keys = list(self.cache.keys())
+        now = time.time()
+        for key in keys:
+            if now - self.cache[key].time >= self.keep_cache_sec:
+                LOG.info(f'[Cache] Expired vector ID={key}')
+                del self.cache[key]
 
     def get_vector(self, n_styles=18):
         return torch.randn([1, n_styles, 512]).to(self.device)
