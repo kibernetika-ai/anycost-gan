@@ -16,13 +16,16 @@ def load_state_dict_from_url(url, key=None):
     return sd
 
 
-def get_pretrained(model, config=None):
+def get_pretrained(model, config=None, path=None):
     if model in ['attribute-predictor', 'inception']:
         assert config is None
         url = URL_TEMPLATE.format('attribute', 'predictor')  # not used for inception
     else:
         assert config is not None
         url = URL_TEMPLATE.format(model, config)
+
+    if path is not None:
+        url = path
 
     if model == 'generator':
         if config in ['anycost-ffhq-config-f', 'anycost-ffhq-config-f-flexible', 'stylegan2-ffhq-config-f']:

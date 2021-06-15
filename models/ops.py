@@ -11,7 +11,7 @@ if not use_cuda:  # CUDA kernel
     from cuda_op.upfirdn2d import upfirdn2d
 else:
     # print(e)
-    print(' # Using native op...')
+    print('# Using native op...')
     from cuda_op.op_native import FusedLeakyReLU, fused_leaky_relu, upfirdn2d
 
 __all__ = ['PixelNorm', 'EqualConv2d', 'EqualLinear', 'ModulatedConv2d', 'StyledConv', 'ConvLayer', 'ResBlock',
