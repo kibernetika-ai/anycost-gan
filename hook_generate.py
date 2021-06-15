@@ -40,10 +40,9 @@ def process(inputs, ctx, **kwargs):
     is_video = False
     direction_values = face_gen.get_direction_values()
 
-    if 'image' in inputs:
-        LOG.info(inputs)
+    if 'image' in inputs and inputs['image']:
         image, is_video = helpers.load_image(inputs, 'image', rgb=True)
-    if 'vector' in inputs:
+    if 'vector' in inputs and inputs['vector']:
         vector = inputs['vector']
 
     # if image supplied, then generate a vector from it and re-generate image
