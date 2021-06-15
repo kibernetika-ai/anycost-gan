@@ -71,5 +71,5 @@ def process(inputs, ctx, **kwargs):
 
     return {
         'image': img,
-        'vector': styles.cpu().numpy(),
+        'vector': styles.cpu().numpy().tolist(),
     }
