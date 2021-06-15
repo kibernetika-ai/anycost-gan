@@ -1,9 +1,12 @@
+import logging
+
 import cv2
 from ml_serving.utils import helpers
 
 import generate_face
 
 
+LOG = logging.getLogger(__name__)
 PARAMS = {
     'generator': None,
     'encoder': None,
@@ -38,7 +41,7 @@ def process(inputs, ctx, **kwargs):
     direction_values = face_gen.get_direction_values()
 
     if 'image' in inputs:
-        print(inputs['image'])
+        LOG.info(inputs)
         image, is_video = helpers.load_image(inputs, 'image', rgb=True)
     if 'vector' in inputs:
         vector = inputs['vector']
