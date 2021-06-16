@@ -71,17 +71,17 @@ def process(inputs, ctx, **kwargs):
     new_face = vector is None
     gen_kwargs = {'resolution': resolution, 'channel_ratio': channel_ratio}
 
+    result = {}
     if not new_face:
         vector = face_gen.deform_vector(vector, direction_values)
-
-    img, styles = face_gen.get_new_face(
-        vector=vector,
-        get_styles=True,
-        new_face=new_face,
-        **gen_kwargs
-    )
-    result = {}
-    if new_face:
+        img, styles = face_gen.get_new_face(
+            vector=vector,
+            get_styles=True,
+            **gen_kwargs
+        )
+    else:
+        # rand = face_gen.get_vector(1)
+        styles = face_gen.get_styles()
         styles = face_gen.deform_vector(styles, direction_values)
         img = face_gen.get_new_face(vector=styles, **gen_kwargs)
         cache_vector_id = face_gen.cache_vector(styles)

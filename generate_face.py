@@ -181,6 +181,12 @@ class FaceGen:
     def get_vector(self, n_styles=18):
         return torch.randn([1, n_styles, 512]).to(self.device)
 
+    def get_styles(self):
+        with torch.no_grad():
+            rand = self.get_vector(1)
+            styles = self.gen.get_style(rand)
+        return styles
+
     def get_direction_values(self):
         return self._direction_values.copy()
 
