@@ -30,9 +30,14 @@ def process(inputs, ctx, **kwargs):
     """Generate face
 
     Possible inputs:
-    - parameters dict (random face)
+    - parameters values (random face)
+    - parameters + cached vector id (edit earlier generated face)
     - parameters + vector [18, 512] (face with given parameters for style vectors)
     - parameters + image (re-generated face with given parameters)
+
+    Additional parameters:
+    - resolution: 128, 256, 512 or 1024
+    - channel_ratio: 0.25, 0.5, 0.75 or 1
     """
     face_gen: generate_face.FaceGen = ctx.global_ctx
     image = None
@@ -42,11 +47,14 @@ def process(inputs, ctx, **kwargs):
 
     if 'image' in inputs and inputs['image']:
         image, is_video = helpers.load_image(inputs, 'image', rgb=True)
+    vector_id = helpers.get_param(inputs, 'vector_id')
+    resolution = helpers.get_param(inputs, 'resolution')
+    channel_ratio = helpers.get_param(inputs, 'channel_ratio')
+
     if 'vector' in inputs and inputs['vector']:
         vector = inputs['vector']
-    if 'vector_id' in inputs and inputs['vector_id']:
+    if vector_id:
         # Try to load vector
-        vector_id = helpers.get_param(inputs, 'vector_id')
         vector = face_gen.get_cached_vector(vector_id)
         LOG.info(f'Using cached vector ID={vector_id}')
 
@@ -61,6 +69,7 @@ def process(inputs, ctx, **kwargs):
 
     # If there is still no vector, then generate one to get random face
     new_face = vector is None
+    gen_kwargs = {'resolution': resolution, 'channel_ratio': channel_ratio}
 
     if not new_face:
         vector = face_gen.deform_vector(vector, direction_values)
@@ -68,12 +77,13 @@ def process(inputs, ctx, **kwargs):
     img, styles = face_gen.get_new_face(
         vector=vector,
         get_styles=True,
-        new_face=new_face
+        new_face=new_face,
+        **gen_kwargs
     )
     result = {}
     if new_face:
         styles = face_gen.deform_vector(styles, direction_values)
-        img = face_gen.get_new_face(vector=styles)
+        img = face_gen.get_new_face(vector=styles, **gen_kwargs)
         cache_vector_id = face_gen.cache_vector(styles)
         LOG.info(f'New cached vector ID={cache_vector_id}')
         result['vector_id'] = cache_vector_id

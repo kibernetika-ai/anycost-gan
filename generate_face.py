@@ -1,6 +1,7 @@
 import argparse
 import logging
 import time
+import threading
 import uuid
 
 import cv2
@@ -8,6 +9,7 @@ import numpy as np
 import torch
 
 import models
+from models import dynamic_channel
 
 n_style_to_change = 12
 LOG = logging.getLogger(__name__)
@@ -70,6 +72,9 @@ class FaceGen:
         self.boundaries = models.get_pretrained('boundary', config_name, path=bound_path)
         self.keep_cache_sec = 3600
         self.cache = {}
+        self.lock = threading.Lock()
+        self.resolutions = [128, 256, 512, 1024]
+        self.channel_ratio = [0.25, 0.5, 0.75, 1]
 
         '''
         possible keys:
@@ -114,7 +119,10 @@ class FaceGen:
             'input_is_style': True
         }
 
-    def get_new_face(self, input_kwargs=None, vector=None, get_styles=False, new_face=False):
+    def get_new_face(self, input_kwargs=None, vector=None, get_styles=False,
+                     new_face=False, resolution=0, channel_ratio=0.):
+        """Generates face.
+        """
         if vector is None:
             vector = self.get_vector(n_styles=1)
         if input_kwargs is None and not new_face:
@@ -124,8 +132,28 @@ class FaceGen:
         input_kwargs['styles'] = vector
         input_kwargs['return_styles'] = get_styles
         with torch.no_grad():
-            # scale = 2.0 * float(i_scale) / (n_steps - 1) - 1.
-            img, styles = self.gen(**input_kwargs)
+            with self.lock:
+                if resolution:
+                    if resolution not in self.resolutions:
+                        raise RuntimeError(
+                            f'Inappropriate resolution: {resolution}, '
+                            f'possible choices are {self.resolutions}'
+                        )
+                    LOG.info(f'Set resolution to {resolution}')
+                    self.gen.target_res = resolution
+                if channel_ratio is not None and channel_ratio > 0:
+                    if channel_ratio not in self.channel_ratio:
+                        raise RuntimeError(
+                            f'Inappropriate channel ratio: {channel_ratio}, '
+                            f'possible choices are {self.channel_ratio}'
+                        )
+                    LOG.info(f'Set channel ratio to {channel_ratio}')
+                    dynamic_channel.set_uniform_channel_ratio(self.gen, channel_ratio)
+                img, styles = self.gen(**input_kwargs)
+
+                if resolution or (channel_ratio and channel_ratio > 0):
+                    dynamic_channel.reset_generator(self.gen)
+
             img = img.cpu().numpy()[0]
             if get_styles:
                 return to_img(img), styles
