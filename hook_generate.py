@@ -67,7 +67,7 @@ def process(inputs, ctx, **kwargs):
 
     # if image supplied, then generate a vector from it and re-generate image
     if image is not None:
-        image, styles = face_gen.encode_image_get_vector(image)
+        _, vector = face_gen.encode_image_get_vector(image)
         vector_id = face_gen.cache_vector(vector)
 
     for name in direction_values:
