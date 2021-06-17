@@ -219,7 +219,7 @@ class FaceGen:
         for_encoder = ((for_encoder.astype(np.float32) - 127.5) / 127.5).transpose([2, 0, 1])
         with torch.no_grad():
             vector = self.encoder(torch.tensor(for_encoder).unsqueeze(0).to(self.device))
-            img = self.get_new_face(self.input_kwargs, vector=vector)
+            img, vector = self.get_new_face(self.input_kwargs, vector=vector, get_styles=True)
         return img, vector
 
     def deform_vector(self, old_vector, direction_values, max_value=0.6):

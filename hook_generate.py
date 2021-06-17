@@ -67,7 +67,8 @@ def process(inputs, ctx, **kwargs):
 
     # if image supplied, then generate a vector from it and re-generate image
     if image is not None:
-        image, vector = face_gen.encode_image_get_vector(image)
+        image, styles = face_gen.encode_image_get_vector(image)
+        vector_id = face_gen.cache_vector(vector)
 
     for name in direction_values:
         if name in inputs:
@@ -80,10 +81,10 @@ def process(inputs, ctx, **kwargs):
 
     result = {}
     if not new_face:
-        vector = face_gen.deform_vector(vector, direction_values)
+        styles = face_gen.deform_vector(vector, direction_values)
         if generate_image:
             img, styles = face_gen.get_new_face(
-                vector=vector,
+                vector=styles,
                 get_styles=True,
                 **gen_kwargs
             )
