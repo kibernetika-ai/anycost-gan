@@ -47,9 +47,16 @@ def process(inputs, ctx, **kwargs):
 
     if 'image' in inputs and inputs['image']:
         image, is_video = helpers.load_image(inputs, 'image', rgb=True)
+    generate_image = helpers.boolean_string(
+        helpers.get_param(inputs, 'generate_image', default=True)
+    )
     vector_id = helpers.get_param(inputs, 'vector_id')
+    method = helpers.get_param(inputs, 'method')
     resolution = helpers.get_param(inputs, 'resolution')
     channel_ratio = helpers.get_param(inputs, 'channel_ratio')
+
+    if method == 'get_face_params':
+        return {'face_params': list(face_gen.get_direction_values().keys())}
 
     if 'vector' in inputs and inputs['vector']:
         vector = inputs['vector']
@@ -74,23 +81,27 @@ def process(inputs, ctx, **kwargs):
     result = {}
     if not new_face:
         vector = face_gen.deform_vector(vector, direction_values)
-        img, styles = face_gen.get_new_face(
-            vector=vector,
-            get_styles=True,
-            **gen_kwargs
-        )
+        if generate_image:
+            img, styles = face_gen.get_new_face(
+                vector=vector,
+                get_styles=True,
+                **gen_kwargs
+            )
     else:
         # rand = face_gen.get_vector(1)
         styles = face_gen.get_styles()
         styles = face_gen.deform_vector(styles, direction_values)
-        img = face_gen.get_new_face(vector=styles, **gen_kwargs)
+        if generate_image:
+            img = face_gen.get_new_face(vector=styles, **gen_kwargs)
         cache_vector_id = face_gen.cache_vector(styles)
         LOG.info(f'New cached vector ID={cache_vector_id}')
         result['vector_id'] = cache_vector_id
 
-    if not is_video:
+    if not is_video and generate_image:
         img = cv2.imencode('.jpg', img[:, :, ::-1])[1].tobytes()
+        result['image'] = img
 
-    result['image'] = img
+    if vector_id:
+        result['vector_id'] = vector_id
     result['vector'] = styles.cpu().numpy().tolist()
     return result

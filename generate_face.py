@@ -35,13 +35,13 @@ def to_img(img):
 
 def show(img, direction_idx, direction_i):
     small = cv2.resize(img, (img.shape[1] // 2, img.shape[0] // 2), interpolation=cv2.INTER_AREA)
-    bar = np.zeros([130, small.shape[1], 3], dtype=np.uint8)
+    bar = np.zeros([small.shape[0], 450, 3], dtype=np.uint8)
     font = cv2.FONT_HERSHEY_SIMPLEX
-    columns = 4
+    rows = 20
     for k, v in direction_idx.items():
         color = (200, 200, 200) if k != direction_i else (0, 250, 0)
-        x = (k % columns) * 120
-        y = 20 + 25 * (k // columns)
+        y = 20 + (k % rows) * 25
+        x = 20 + 180 * (k // rows)
         cv2.putText(
             bar,
             v,
@@ -50,7 +50,7 @@ def show(img, direction_idx, direction_i):
             0.6,
             color, thickness=1, lineType=cv2.LINE_AA
         )
-    pic = np.vstack([small, bar])
+    pic = np.hstack([small, bar])
     cv2.imshow('Face', pic[:, :, ::-1])
 
 
@@ -88,22 +88,46 @@ class FaceGen:
         '''
 
         direction_map = {
-            'smiling': '31_Smiling',
-            'young': '39_Young',
-            'wavy_hair': '33_Wavy_Hair',
-            'straight_hair': '32_Straight_Hair',
-            'gray_hair': '17_Gray_Hair',
-            'blonde_hair': '09_Blond_Hair',
-            'black_hair': '08_Black_Hair',
-            'eyeglass': '15_Eyeglasses',
-            'mustache': '22_Mustache',
-            'bald': '04_Bald',
+            '5_o_clock_shadow': '00_5_o_Clock_Shadow',
+            'arched_eyebrows': '01_Arched_Eyebrows',
             'attractive': '02_Attractive',
-            'big_nose': '07_Big_Nose',
-            'pointy_nose': '27_Pointy_Nose',
+            'bags_under_eyes': '03_Bags_Under_Eyes',
+            'bald': '04_Bald',
+            'bangs': '05_Bangs',
             'big_lips': '06_Big_Lips',
+            'big_nose': '07_Big_Nose',
+            'black_hair': '08_Black_Hair',
+            'blonde_hair': '09_Blond_Hair',
+            'blurry': '10_Blurry',
+            'brown_hair': '11_Brown_Hair',
+            'bushy_eyebrows': '12_Bushy_Eyebrows',
+            'chubby': '13_Chubby',
+            'double_chin': '14_Double_Chin',
+            'eyeglasses': '15_Eyeglasses',
+            'goatee': '16_Goatee',
+            'gray_hair': '17_Gray_Hair',
+            'heavy_makeup': '18_Heavy_Makeup',
+            'high_cheekbones': '19_High_Cheekbones',
             'male': '20_Male',
-            'mouth_open': '21_Mouth_Slightly_Open',
+            'mouth_slightly_open': '21_Mouth_Slightly_Open',
+            'mustache': '22_Mustache',
+            'narrow_eyes': '23_Narrow_Eyes',
+            'no_beard': '24_No_Beard',
+            'oval_face': '25_Oval_Face',
+            'pale_skin': '26_Pale_Skin',
+            'pointy_nose': '27_Pointy_Nose',
+            'receding_hairline': '28_Receding_Hairline',
+            'rosy_cheeks': '29_Rosy_Cheeks',
+            'sideburns': '30_Sideburns',
+            'smiling': '31_Smiling',
+            'straight_hair': '32_Straight_Hair',
+            'wavy_hair': '33_Wavy_Hair',
+            'wearing_earrings': '34_Wearing_Earrings',
+            'wearing_hat': '35_Wearing_Hat',
+            'wearing_lipstick': '36_Wearing_Lipstick',
+            'wearing_necklace': '37_Wearing_Necklace',
+            'wearing_necktie': '38_Wearing_Necktie',
+            'young': '39_Young'
         }
         self.direction_idx = {k: v for k, v in zip(range(len(direction_map)), direction_map)}
 
@@ -253,6 +277,10 @@ def main():
             if key == ord('n'):
                 # next direction
                 direction_i += 1
+                direction_i = direction_i % len(direction_values)
+            if key == ord('b'):
+                # prev direction
+                direction_i = direction_i + len(direction_values) - 1
                 direction_i = direction_i % len(direction_values)
             if key == ord('['):
                 direction_name = direction_idx[direction_i]
