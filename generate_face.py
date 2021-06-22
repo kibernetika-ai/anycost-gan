@@ -10,6 +10,7 @@ import torch
 
 import models
 from models import dynamic_channel
+from models import headpose
 
 n_style_to_change = 12
 LOG = logging.getLogger(__name__)
@@ -21,6 +22,7 @@ def parse_args():
     parser.add_argument('--encoder')
     parser.add_argument('--boundary')
     parser.add_argument('--image')
+    parser.add_argument('--head-pose-model-path')
     parser.add_argument('--scale', type=float, default=0.0)
     parser.add_argument('--interactive', action='store_true')
     parser.add_argument('--show', action='store_true')
@@ -62,7 +64,7 @@ class CachedVector:
 
 class FaceGen:
     def __init__(self, config_name='anycost-ffhq-config-f', gen_path=None, enc_path=None,
-                 bound_path=None):
+                 bound_path=None, head_pose_driver=None, head_pose_model_path=None):
         device_str = 'cuda' if torch.cuda.is_available() else 'cpu'
         device = torch.device(device_str)
         self.device = device
@@ -75,6 +77,17 @@ class FaceGen:
         self.lock = threading.Lock()
         self.resolutions = [128, 256, 512, 1024]
         self.channel_ratio = [0.25, 0.5, 0.75, 1]
+
+        self.head_pose_driver = head_pose_driver
+        self.head_pose_threshold = [25, 25, 20]
+        self.head_pose_axis_threshold = None
+        self.head_pose = None
+        if self.head_pose_driver is not None:
+            self.head_pose = headpose.HeadPoseFilter(
+                head_pose_driver=head_pose_driver,
+                head_pose_model_path=head_pose_model_path,
+                head_pose_thresholds=self.head_pose_threshold
+            )
 
         '''
         possible keys:
@@ -143,8 +156,16 @@ class FaceGen:
             'input_is_style': True
         }
 
-    def get_new_face(self, input_kwargs=None, vector=None, get_styles=False,
-                     new_face=False, resolution=0, channel_ratio=0.):
+    def _is_appropriate_head_pose(self, image):
+        poses = self.head_pose.head_poses_for_images([image], resize=True)
+        return not headpose.wrong_pose(
+            poses[0],
+            self.head_pose_threshold,
+            self.head_pose_axis_threshold,
+        ), poses[0]
+
+    def get_new_face(self, input_kwargs=None, vector=None, get_styles=True,
+                     new_face=False, resolution=0, channel_ratio=0., filter_head_pose=False):
         """Generates face.
         """
         if vector is None:
@@ -174,6 +195,14 @@ class FaceGen:
                     LOG.info(f'Set channel ratio to {channel_ratio}')
                     dynamic_channel.set_uniform_channel_ratio(self.gen, channel_ratio)
                 img, styles = self.gen(**input_kwargs)
+                if new_face and self.head_pose is not None and filter_head_pose:
+                    appropriate, head_pose = self._is_appropriate_head_pose(to_img(img.cpu().numpy()[0]))
+                    while not appropriate:
+                        LOG.info(f'[FaceGen] Inappropriate head-pose {head_pose}, generating new face')
+                        cv2.imwrite(f'{np.random.randint(0, 10000)}.jpg', to_img(img.cpu().numpy()[0]))
+                        vector = self.get_vector(n_styles=1)
+                        img, styles = self.gen({'styles': vector, 'return_styles': get_styles})
+                        appropriate = self._is_appropriate_head_pose(to_img(img.cpu().numpy()[0]))
 
                 if resolution or (channel_ratio and channel_ratio > 0):
                     dynamic_channel.reset_generator(self.gen)
@@ -247,7 +276,8 @@ def main():
         config_name='anycost-ffhq-config-f',
         gen_path=generator_path,
         enc_path=encoder_path,
-        bound_path=boundary_path
+        bound_path=boundary_path,
+        head_pose_model_path=args.head_pose_model_path,
     )
     direction_i = 0
     direction_step = 5.

@@ -18,11 +18,15 @@ PARAMS = {
 def init_hook(ctx, **params):
     PARAMS.update(params)
 
+    head_pose = None
+    if len(ctx.drivers) > 1:
+        head_pose = ctx.drivers[1]
     face_gen = generate_face.FaceGen(
         config_name='anycost-ffhq-config-f',
         gen_path=PARAMS['generator'],
         enc_path=PARAMS['encoder'],
-        bound_path=PARAMS['boundary']
+        bound_path=PARAMS['boundary'],
+        head_pose=head_pose,
     )
     return face_gen
 
@@ -41,6 +45,8 @@ def process(inputs, ctx, **kwargs):
     - channel_ratio: 0.25, 0.5, 0.75 or 1
     """
     face_driver = ctx.drivers[0]
+    if len(ctx.drivers) > 1:
+        head_pose_driver = ctx.drivers[1]
     face_gen: generate_face.FaceGen = ctx.global_ctx
     image = None
     vector = None
