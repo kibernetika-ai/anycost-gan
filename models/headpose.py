@@ -23,7 +23,7 @@ HEAD_POSE_THRESHOLDS = '25,25,20'
 
 class HeadPoseFilter(object):
     def __init__(self, **kwargs):
-        super().__init__(filter_type='head pose', **kwargs)
+        # super().__init__(filter_type='head pose', **kwargs)
         head_pose_driver = kwargs.get('head_pose_driver')
         self._driver_type = kwargs.get('head_pose_driver_type', HEAD_POSE_DRIVER_TYPE)
         if head_pose_driver is None:
@@ -43,11 +43,11 @@ class HeadPoseFilter(object):
                 else:
                     raise ValueError('unknown head pose driver type \'{}\''.format(self._driver_type))
         self._driver = head_pose_driver
-        self._head_pose_axis_threshold = float(kwargs.get('head_pose_axis_threshold', None))
+        self._head_pose_axis_threshold = float(kwargs.get('head_pose_axis_threshold', 0.0))
         self._head_pose_thresholds = get_thresholds(
             kwargs.get('head_pose_thresholds', HEAD_POSE_THRESHOLDS)
         )
-        self._no_skip = helpers.boolean_string(kwargs.get('head_pose_no_skip'))
+        # self._no_skip = helpers.boolean_string(kwargs.get('head_pose_no_skip'))
 
     def set_thresholds(self, head_pose_thresholds: str):
         self._head_pose_thresholds = get_thresholds(head_pose_thresholds)
@@ -172,6 +172,9 @@ def _head_pose_to_axis(hp_ind: [float]):
 
 
 def get_thresholds(thresholds: str) -> [int]:
+    if isinstance(thresholds, list):
+        return thresholds
+
     head_pose_thresholds_spl = thresholds.split(",")
     if len(head_pose_thresholds_spl) != 3:
         raise ValueError('head_pose_thresholds must be three comma separated numbers')

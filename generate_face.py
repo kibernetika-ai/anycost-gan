@@ -79,10 +79,11 @@ class FaceGen:
         self.channel_ratio = [0.25, 0.5, 0.75, 1]
 
         self.head_pose_driver = head_pose_driver
-        self.head_pose_threshold = [25, 25, 20]
+        self.head_pose_threshold = [19, 20, 20]
+        # self.head_pose_threshold = [37, 35, 25]
         self.head_pose_axis_threshold = None
         self.head_pose = None
-        if self.head_pose_driver is not None:
+        if self.head_pose_driver is not None or head_pose_model_path is not None:
             self.head_pose = headpose.HeadPoseFilter(
                 head_pose_driver=head_pose_driver,
                 head_pose_model_path=head_pose_model_path,
@@ -157,7 +158,7 @@ class FaceGen:
         }
 
     def _is_appropriate_head_pose(self, image):
-        poses = self.head_pose.head_poses_for_images([image], resize=True)
+        poses = self.head_pose.head_poses_for_images(np.stack([image]), resize=True)
         return not headpose.wrong_pose(
             poses[0],
             self.head_pose_threshold,
@@ -165,7 +166,7 @@ class FaceGen:
         ), poses[0]
 
     def get_new_face(self, input_kwargs=None, vector=None, get_styles=True,
-                     new_face=False, resolution=0, channel_ratio=0., filter_head_pose=False):
+                     new_face=False, resolution=0, channel_ratio=0., filter_head_pose=True):
         """Generates face.
         """
         if vector is None:
@@ -199,10 +200,10 @@ class FaceGen:
                     appropriate, head_pose = self._is_appropriate_head_pose(to_img(img.cpu().numpy()[0]))
                     while not appropriate:
                         LOG.info(f'[FaceGen] Inappropriate head-pose {head_pose}, generating new face')
-                        cv2.imwrite(f'{np.random.randint(0, 10000)}.jpg', to_img(img.cpu().numpy()[0]))
+                        # cv2.imwrite(f'{np.random.randint(0, 10000)}.jpg', to_img(img.cpu().numpy()[0]))
                         vector = self.get_vector(n_styles=1)
-                        img, styles = self.gen({'styles': vector, 'return_styles': get_styles})
-                        appropriate = self._is_appropriate_head_pose(to_img(img.cpu().numpy()[0]))
+                        img, styles = self.gen(styles=vector, return_styles=get_styles)
+                        appropriate, head_pose = self._is_appropriate_head_pose(to_img(img.cpu().numpy()[0]))
 
                 if resolution or (channel_ratio and channel_ratio > 0):
                     dynamic_channel.reset_generator(self.gen)
@@ -264,6 +265,9 @@ class FaceGen:
 
 def main():
     args = parse_args()
+    logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
+    logging.root.setLevel(logging.INFO)
+
     generator_path = args.generator
     encoder_path = args.encoder
     boundary_path = args.boundary
@@ -289,7 +293,7 @@ def main():
         img = cv2.cvtColor(cv2.imread(args.image, cv2.IMREAD_COLOR), cv2.COLOR_RGB2BGR)
         img, vector = face_gen.encode_image_get_vector(img)
     else:
-        img = face_gen.get_new_face({}, vector=vector)
+        img, _ = face_gen.get_new_face({}, vector=vector)
     if args.output:
         print(f'Saved to {args.output}')
         cv2.imwrite(args.output, img[:, :, ::-1])
@@ -317,18 +321,18 @@ def main():
                 direction_values[direction_name] -= direction_step
                 new_vector = face_gen.deform_vector(vector, direction_values)
 
-                img = face_gen.get_new_face(vector=new_vector)
+                img, _ = face_gen.get_new_face(vector=new_vector)
             if key == ord(']'):
                 direction_name = direction_idx[direction_i]
                 direction_values[direction_name] += direction_step
                 new_vector = face_gen.deform_vector(vector, direction_values)
 
-                img = face_gen.get_new_face(vector=new_vector)
+                img, _ = face_gen.get_new_face(vector=new_vector)
             if key == 32:
                 direction_values = face_gen.get_direction_values()
 
                 img, vector = face_gen.get_new_face(get_styles=True, new_face=True)
-                img = face_gen.get_new_face(vector=vector)
+                img, _ = face_gen.get_new_face(vector=vector)
 
             show(img, direction_idx, direction_i)
 

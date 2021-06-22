@@ -18,15 +18,15 @@ PARAMS = {
 def init_hook(ctx, **params):
     PARAMS.update(params)
 
-    head_pose = None
+    head_pose_driver = None
     if len(ctx.drivers) > 1:
-        head_pose = ctx.drivers[1]
+        head_pose_driver = ctx.drivers[1]
     face_gen = generate_face.FaceGen(
         config_name='anycost-ffhq-config-f',
         gen_path=PARAMS['generator'],
         enc_path=PARAMS['encoder'],
         bound_path=PARAMS['boundary'],
-        head_pose=head_pose,
+        head_pose_driver=head_pose_driver,
     )
     return face_gen
 
@@ -45,8 +45,6 @@ def process(inputs, ctx, **kwargs):
     - channel_ratio: 0.25, 0.5, 0.75 or 1
     """
     face_driver = ctx.drivers[0]
-    if len(ctx.drivers) > 1:
-        head_pose_driver = ctx.drivers[1]
     face_gen: generate_face.FaceGen = ctx.global_ctx
     image = None
     vector = None
@@ -97,7 +95,11 @@ def process(inputs, ctx, **kwargs):
 
     # If there is still no vector, then generate one to get random face
     new_face = vector is None
-    gen_kwargs = {'resolution': resolution, 'channel_ratio': channel_ratio}
+    gen_kwargs = {
+        'resolution': resolution,
+        'channel_ratio': channel_ratio,
+        'new_face': new_face
+    }
 
     result = {}
     if not new_face:
@@ -113,7 +115,7 @@ def process(inputs, ctx, **kwargs):
         styles = face_gen.get_styles()
         styles = face_gen.deform_vector(styles, direction_values)
         if generate_image:
-            img = face_gen.get_new_face(vector=styles, **gen_kwargs)
+            img, _ = face_gen.get_new_face(vector=styles, **gen_kwargs)
         cache_vector_id = face_gen.cache_vector(styles)
         LOG.info(f'New cached vector ID={cache_vector_id}')
         result['vector_id'] = cache_vector_id
